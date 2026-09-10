@@ -1213,6 +1213,8 @@ def handle_init():
 async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
     webhook_start = time.perf_counter()
     payload = await request.json()
+
+    '''
     
     print("RAW PAYLOAD:")
     print(
@@ -1221,7 +1223,7 @@ async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
             indent=4,
             ensure_ascii=False
         )
-    )
+    )'''
     logger.info(
         "[WEBHOOK] Received | event=%s",
         payload.get("event")
