@@ -289,7 +289,9 @@ async def whatsapp_flow(
                 "Handling INIT..."
             )
 
-            response_data = handle_init()
+            #response_data = handle_init()
+            flow_token = decrypted_data.get("flow_token", "")
+            response_data = handle_init(flow_token)
 
 
         # ==================================================
@@ -1133,19 +1135,7 @@ async def whatsapp_flow(
 # ==========================================================
 # INIT HANDLER
 # ==========================================================
-
-def handle_init():
-
-    """
-    Handles Meta Flow INIT.
-
-    Currently loads:
-
-        - Active branches
-        - Active services
-
-    User creation will be handled later.
-    """
+def handle_init(flow_token=""):
 
     from database import SessionLocal
 
@@ -1154,22 +1144,70 @@ def handle_init():
     try:
 
         # --------------------------------------------------
+        # RESOLVE USER FROM FLOW TOKEN
+        # --------------------------------------------------
+
+        user_name = ""
+
+        session_id = (
+            flow_token.split(":", 1)[1]
+            if ":" in flow_token
+            else flow_token
+        )
+
+        if session_id:
+
+            flow_session = (
+                db.query(FlowSession)
+                .filter(
+                    FlowSession.session_id == session_id
+                )
+                .first()
+            )
+
+            if flow_session:
+
+                user = (
+                    db.query(User)
+                    .filter(
+                        User.phone_number == flow_session.phone_number
+                    )
+                    .first()
+                )
+
+                if user:
+                    user_name = user.name or ""
+
+                    logger.info(
+                        "Existing user found for Flow | "
+                        "user_id=%s | name=%s",
+                        user.id,
+                        user.name
+                    )
+
+                else:
+                    logger.info(
+                        "New user Flow | phone=%s",
+                        flow_session.phone_number
+                    )
+
+            else:
+                logger.warning(
+                    "FlowSession not found during INIT | session_id=%s",
+                    session_id
+                )
+
+        # --------------------------------------------------
         # GET BRANCHES
         # --------------------------------------------------
 
-        branches = get_branches(
-            db
-        )
-
+        branches = get_branches(db)
 
         # --------------------------------------------------
         # GET SERVICES
         # --------------------------------------------------
 
-        services = get_services(
-            db
-        )
-
+        services = get_services(db)
 
         # --------------------------------------------------
         # BUILD RESPONSE
@@ -1181,6 +1219,8 @@ def handle_init():
 
             "data": {
 
+                "name": user_name,
+
                 "branches": branches,
 
                 "services": services,
@@ -1191,16 +1231,14 @@ def handle_init():
 
         }
 
-
         logger.info(
-            "INIT loaded %d branches and %d services.",
+            "INIT loaded %d branches, %d services | name=%s",
             len(branches),
-            len(services)
+            len(services),
+            user_name
         )
 
-
         return response_data
-
 
     finally:
 

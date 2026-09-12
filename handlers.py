@@ -342,12 +342,16 @@ def process_message(
             return build_main_menu(
                 user.name
             )
-
+        return build_main_menu("there")
+        '''
         return (
             "👋 Welcome to Hair Destination Studio!\n\n"
             "Before we begin,\n"
             "May I know your name?"
         )
+        
+        '''
+        
 
     # ======================================================
     # UPCOMING APPOINTMENTS
