@@ -29,7 +29,7 @@ ZERNIO_FLOW_ID = os.getenv(
 ZERNIO_FLOW_SEND_URL = (
     "https://zernio.com/api/v1/whatsapp/flows/send"
 )
-
+BUSINESS_ID = int(os.getenv("BUSINESS_ID", "1"))
 
 # ==========================================================
 # GREETINGS
@@ -497,7 +497,7 @@ def process_message(
         business_id = (
             user.business_id
             if user
-            else DEFAULT_BUSINESS_ID
+            else BUSINESS_ID
         )
 
         # --------------------------------------------------
