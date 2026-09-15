@@ -22,7 +22,7 @@ PRIVATE_KEY_PASSWORD = os.getenv("PRIVATE_KEY_PASSWORD")
 # LOAD RSA PRIVATE KEY
 # ==========================================================
 
-with open("private.pem", "rb") as f:
+with open("/etc/secrets/private.pem", "rb") as f:
 
     PRIVATE_KEY = serialization.load_pem_private_key(
         f.read(),
