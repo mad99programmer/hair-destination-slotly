@@ -236,18 +236,44 @@ async def whatsapp_flow(
         # DECRYPT AES KEY
         # ==================================================
 
-        aes_key = decrypt_aes_key(
+        encrypted_key_bytes = base64.b64decode(
             encrypted_aes_key
         )
 
         logger.info(
-            "AES key decrypted successfully."
+            "RSA DEBUG | ciphertext_len=%d",
+            len(encrypted_key_bytes)
         )
+
+        try:
+
+            aes_key = decrypt_aes_key(
+                encrypted_aes_key
+            )
+
+            logger.info(
+                "RSA DEBUG | decrypt SUCCESS | aes_len=%d",
+                len(aes_key)
+            )
+
+        except Exception:
+
+            logger.exception(
+                "RSA DEBUG | decrypt FAILED"
+            )
+
+            raise
 
 
         # ==================================================
         # DECRYPT FLOW DATA
         # ==================================================
+
+        logger.info(
+            "FLOW DEBUG | encrypted_flow_data_len=%d | iv_len=%d",
+            len(base64.b64decode(encrypted_flow_data)),
+            len(iv)
+        )
 
         decrypted_data = decrypt_flow_data(
             encrypted_flow_data,
