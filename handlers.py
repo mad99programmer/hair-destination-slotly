@@ -10,8 +10,9 @@ from models import (
     Service
 )
 from messaging import build_main_menu
-from datetime import date
-
+from datetime import date,datetime
+from zoneinfo import ZoneInfo
+from sqlalchemy import or_, and_
 logger = logging.getLogger("hair-destination-slotly")
 
 
@@ -362,6 +363,10 @@ def process_message(
         # --------------------------------------------------
         # User does not exist
         # --------------------------------------------------
+        india_now = datetime.now(ZoneInfo("Asia/Kolkata"))
+        today = india_now.date()
+        current_time = india_now.time()
+
 
         if not user:
 
@@ -398,7 +403,13 @@ def process_message(
                 Appointment.user_id == user.id,
                 Appointment.business_id == business_id,
                 Appointment.status == "booked",
-                Appointment.appointment_date >= date.today()
+                or_(
+                    Appointment.appointment_date > today,
+                    and_(
+                        Appointment.appointment_date == today,
+                        Appointment.start_time >= current_time
+                    )
+                )
             )
             .order_by(
                 Appointment.appointment_date,

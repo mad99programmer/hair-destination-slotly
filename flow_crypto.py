@@ -35,7 +35,19 @@ with open("private.pem", "rb") as f:
 
 print("Private key loaded successfully.")
 print("RSA key size:", PRIVATE_KEY.key_size)
+import hashlib
 
+public_key = PRIVATE_KEY.public_key()
+
+public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+
+print(
+    "PUBLIC KEY SHA256:",
+    hashlib.sha256(public_pem).hexdigest()
+)
 
 # ==========================================================
 # DECRYPT AES KEY
