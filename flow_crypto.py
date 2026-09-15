@@ -39,16 +39,12 @@ import hashlib
 
 public_key = PRIVATE_KEY.public_key()
 
-public_pem = public_key.public_bytes(
-    encoding=serialization.Encoding.PEM,
+public_der = public_key.public_bytes(
+    encoding=serialization.Encoding.DER,
     format=serialization.PublicFormat.SubjectPublicKeyInfo
 )
 
-print(
-    "PUBLIC KEY SHA256:",
-    hashlib.sha256(public_pem).hexdigest()
-)
-
+print(hashlib.sha256(public_der).hexdigest())
 # ==========================================================
 # DECRYPT AES KEY
 # ==========================================================

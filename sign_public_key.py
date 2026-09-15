@@ -7,8 +7,11 @@ load_dotenv()
 PHONE_NUMBER_ID = os.getenv("META_PHONE_NUMBER_ID")
 ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN")
 
-with open("public.pem", "r") as f:
+with open(r"C:\Users\Mitul\Downloads\hair_destination_slotly\public.pem", "r") as f:
     public_key = f.read()
+
+print(public_key)
+
 
 url = f"https://graph.facebook.com/v25.0/{PHONE_NUMBER_ID}/whatsapp_business_encryption"
 
@@ -26,6 +29,7 @@ response = requests.post(
     headers=headers,
     data=data
 )
-
+print(response)
 print("Status:", response.status_code)
 print("Response:", response.text)
+
