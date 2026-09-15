@@ -478,3 +478,14 @@ class FlowSession(Base):
         DateTime(timezone=True),
         server_default=func.now()
     )
+
+    completed = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    completed_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )

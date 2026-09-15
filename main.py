@@ -762,7 +762,9 @@ async def whatsapp_flow(
                                         start_time,
                                         end_time
                                     )
-
+                                    flow_session.completed = True
+                                    flow_session.completed_at = datetime.now(timezone.utc)
+                                    db.commit()
                                     # ==================================================
                                     # SUCCESS SCREEN
                                     # ==================================================
@@ -1011,17 +1013,31 @@ async def whatsapp_flow(
                             # ADD FLOW OPTION
                             # --------------------------------------
 
+                            '''
                             slots.append({
-
+                            
                                 "id": slot_id,
-
+                            
                                 "title": (
                                     f"{start} - {end} • "
                                     f"{remaining} "
                                     f"{'seat' if remaining == 1 else 'seats'}"
                                 )
+                            
+                            })
+                            
+                            '''
+                            slots.append({
+
+                                "id": slot_id,
+
+                                "title": (
+                                    f"{start} - {end}   "
+                                    f"{'🪑 ' * remaining}"
+                                ).strip()
 
                             })
+                                                        
 
 
                         # ==================================================
@@ -1278,16 +1294,18 @@ async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
     webhook_start = time.perf_counter()
     payload = await request.json()
 
+    
+    '''
+    print("RAW PAYLOAD:")
+        print(
+            json.dumps(
+                payload,
+                indent=4,
+                ensure_ascii=False
+            )
+        )
     '''
     
-    print("RAW PAYLOAD:")
-    print(
-        json.dumps(
-            payload,
-            indent=4,
-            ensure_ascii=False
-        )
-    )'''
     logger.info(
         "[WEBHOOK] Received | event=%s",
         payload.get("event")

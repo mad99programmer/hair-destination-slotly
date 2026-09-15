@@ -1,29 +1,50 @@
 import base64
-from cryptography.hazmat.primitives import hashes, serialization
+import os
+
+from dotenv import load_dotenv
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-encrypted_aes_key = "ZrN7C4g1+gS4Tv5sGT60eJNlj1uin8xbCp5v+w41TaWw9WeMHwNQQiQoeV7Q4/usnpl5AxUZ5vTPvnPvYiLaOd2rydZ+Mc9Akt2DdxPuv4KIpMn3+MYlkkLvt7otB5pVYDNtb6IYhj1V70rTU2tDM922NFIpMXUMA47wTTQ+QVfsdgfowFISWTQTx4whK2hm/mJNtd+jouXDBwJ/GTI0L9EXFh3DQfTGAjofrs1YKQmEvZEuj1pEK1hhoLM14wbk/ac4m9jSvE3doWVnnG4RMobazLJWnCAlTQI/cR1d37hf3soSzLPAHtA4mlikQoe3nlB4r5Xt2qQRH/8r/Gs/1A=="
+load_dotenv()
 
+PRIVATE_KEY_PASSWORD = os.getenv("PRIVATE_KEY_PASSWORD")
+
+# Local testing
 with open("private.pem", "rb") as f:
-    private_key = serialization.load_pem_private_key(
+    PRIVATE_KEY = serialization.load_pem_private_key(
         f.read(),
-        password=input("Password: ").encode()
+        password=PRIVATE_KEY_PASSWORD.encode()
     )
 
-encrypted = base64.b64decode(encrypted_aes_key)
-
-print("Encrypted AES key length:", len(encrypted))
-print("RSA key size:", private_key.key_size)
-
-aes_key = private_key.decrypt(
-    encrypted,
-    padding.OAEP(
-        mgf=padding.MGF1(algorithm=hashes.SHA256()),
-        algorithm=hashes.SHA256(),
-        label=None
-    )
+encrypted_aes_key = (
+    "qFuiA50mlaACJgDWDKhlg0xuKuAB4ovA3UpVBMts/"
+    "iemYM6Gw9w/2xDhINvFivmFQyNAyKZ8yl6Y+epaVwl2/"
+    "G/tEzKgcuURdqxsGgcx503Bm94gO6sIhH2JvkhELoxBnijqbi"
+    "oviAdUBihE5tCPLf+1MDDUr9TSe9odw8uziAOM52Y6QbGLW1O1Kl1xYPCJy4Xho/vG/"
+    "WPO+t2pbynLfAOwHPv7Xd+mqgHvxJftsK1D0vIa36EvjlXJ7zcuMd6gIOumG8rF6vNZdug9yfnb4rIYTu9Ps2wWQKabLV4wL0LzGobi4EHN/RROB4FjnbdR3lsnwCm4kYij8EWsSkC7Vg=="
 )
 
-print("SUCCESS")
-print("AES key length:", len(aes_key))
-print("AES key:", aes_key.hex())
+encrypted_key = base64.b64decode(encrypted_aes_key)
+
+print("RSA key size:", PRIVATE_KEY.key_size)
+print("Encrypted AES key length:", len(encrypted_key))
+
+try:
+    aes_key = PRIVATE_KEY.decrypt(
+        encrypted_key,
+        padding.OAEP(
+            mgf=padding.MGF1(
+                algorithm=hashes.SHA256()
+            ),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+    print("RSA DECRYPT: SUCCESS")
+    print("AES key length:", len(aes_key))
+
+except Exception as e:
+    print("RSA DECRYPT: FAILED")
+    print(type(e).__name__)
+    print(str(e))

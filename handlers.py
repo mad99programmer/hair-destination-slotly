@@ -13,6 +13,8 @@ from messaging import build_main_menu
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
 from sqlalchemy import or_, and_
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 logger = logging.getLogger("hair-destination-slotly")
 
 
@@ -130,16 +132,62 @@ def send_booking_flow(
     
     session_id = uuid.uuid4().hex
 
-    flow_session = FlowSession(
-        session_id=session_id,
-        phone_number=user_number,
-        flow_id=ZERNIO_FLOW_ID
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+    flow_session = (
+        db.query(FlowSession)
+        .filter(
+            FlowSession.phone_number == user_number,
+            FlowSession.flow_id == ZERNIO_FLOW_ID,
+            FlowSession.completed == False
+        )
+        .first()
     )
 
-    db.add(flow_session)
-    db.commit()
-    flow_token = f"{ZERNIO_FLOW_ID}:{session_id}"
+    if (
+        flow_session
+        and flow_session.created_at
+        and flow_session.created_at >= now - timedelta(hours=24)
+    ):
+        # Reuse existing active session
+        session_id = flow_session.session_id
 
+        logger.info(
+            "[FLOW SESSION] Reusing existing session | "
+            "session_id=%s | phone=%s",
+            session_id,
+            user_number
+        )
+
+    else:
+        # Create new session
+        session_id = uuid.uuid4().hex
+
+        flow_session = FlowSession(
+            session_id=session_id,
+            phone_number=user_number,
+            flow_id=ZERNIO_FLOW_ID,
+            completed=False
+        )
+
+        db.add(flow_session)
+        db.commit()
+
+        logger.info(
+            "[FLOW SESSION] New session created | "
+            "session_id=%s | phone=%s",
+            session_id,
+            user_number
+        )
+
+   
+    flow_token = f"{ZERNIO_FLOW_ID}:{session_id}"
+    logger.info(
+        "[FLOW SESSION] session_id=%s | flow_token=%s | phone=%s",
+        session_id,
+        flow_token,
+        user_number
+    )
     payload = {
 
         "accountId": account_id,
@@ -606,6 +654,9 @@ def process_message(
                 "Please try again."
             )
 
+
+        #
+            
         flow_sent = send_booking_flow(
             user_number=user_number,
             account_id=account_id,
