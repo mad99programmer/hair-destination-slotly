@@ -177,12 +177,15 @@ async function login() {
                 window.SlotlyNative.getFcmToken();
 
             if (fcmToken) {
-                saveFcmToken(fcmToken);
+                await saveFcmToken(fcmToken);
             }
         }
 
-        window.location.href =
-            "/admin/dashboard/";
+        if (window.SlotlyNative) {
+            window.location.href = "dashboard.html";
+        } else {
+            window.location.href = "/admin/dashboard/";
+        }
 
     }
 
