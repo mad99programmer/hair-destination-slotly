@@ -47,7 +47,47 @@ GREETING_WORDS = {
     "menu"
 }
 
+def send_booking_confirmation(
+    user_number,
+    appointment,
+    branch,
+    service,
+    account_id
+):
+    date_text = appointment.appointment_date.strftime("%d %B %Y")
+    start_text = appointment.start_time.strftime("%I:%M %p").lstrip("0")
+    end_text = appointment.end_time.strftime("%I:%M %p").lstrip("0")
 
+    message = (
+        "✅ *Appointment Booked Successfully!*\n\n"
+        f"📋 Appointment ID: #{appointment.id}\n"
+        f"📅 Date: {date_text}\n"
+        f"🕒 Time: {start_text} - {end_text}\n"
+        f"📍 Branch: {branch.name}\n"
+        f"💇 Service: {service.name}\n\n"
+        "Thank you for choosing Hair Destination Studio! 💙"
+    )
+
+    try:
+        send_reply(
+            user_number,
+            account_id,
+            message
+        )
+
+        logger.info(
+            "[BOOKING CONFIRMATION] Sent | "
+            "appointment_id=%s | phone=%s",
+            appointment.id,
+            user_number
+        )
+
+    except Exception:
+        logger.exception(
+            "[BOOKING CONFIRMATION] Failed | "
+            "appointment_id=%s",
+            appointment.id
+        )
 # ==========================================================
 # EXTRACT LIST SELECTION
 # ==========================================================
@@ -132,8 +172,6 @@ def send_booking_flow(
     
     session_id = uuid.uuid4().hex
 
-    now = datetime.now(ZoneInfo("Asia/Kolkata"))
-
     flow_session = (
         db.query(FlowSession)
         .filter(
@@ -144,22 +182,27 @@ def send_booking_flow(
         .first()
     )
 
-    if (
-        flow_session
-        and flow_session.created_at
-        and flow_session.created_at >= now - timedelta(hours=24)
-    ):
-        # Reuse existing active session
+    if flow_session:
+        # Reuse existing incomplete session
         session_id = flow_session.session_id
 
         logger.info(
-            "[FLOW SESSION] Reusing existing session | "
+            "[FLOW SESSION] Reusing existing incomplete session | "
             "session_id=%s | phone=%s",
             session_id,
             user_number
         )
 
     else:
+        # Delete old completed sessions
+        db.query(FlowSession).filter(
+            FlowSession.phone_number == user_number,
+            FlowSession.flow_id == ZERNIO_FLOW_ID,
+            FlowSession.completed == True
+        ).delete(synchronize_session=False)
+
+        db.commit()
+
         # Create new session
         session_id = uuid.uuid4().hex
 
@@ -179,7 +222,6 @@ def send_booking_flow(
             session_id,
             user_number
         )
-
    
     flow_token = f"{ZERNIO_FLOW_ID}:{session_id}"
     logger.info(
