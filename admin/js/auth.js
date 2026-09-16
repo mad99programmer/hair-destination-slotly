@@ -177,7 +177,7 @@ async function login() {
                 window.SlotlyNative.getFcmToken();
 
             if (fcmToken) {
-                await saveFcmToken(fcmToken);
+                saveFcmToken(fcmToken);
             }
         }
 
