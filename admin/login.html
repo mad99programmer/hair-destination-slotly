@@ -64,6 +64,138 @@
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
   }
+
+/* ==========================================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   ========================================================== */
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+button, input, select, textarea {
+    font-size: 16px; /* prevents iOS Safari auto-zoom */
+}
+
+@media (max-width: 767px) {
+
+    /* General spacing */
+    main {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Mobile sidebar */
+    #sidebar {
+        width: min(82vw, 320px);
+    }
+
+    /* Top bar */
+    header {
+        min-height: 64px;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    header h1 {
+        font-size: 18px !important;
+    }
+
+    /* Main content */
+    main {
+        padding: 14px !important;
+    }
+
+    /* Cards */
+    .rounded-3xl {
+        border-radius: 20px;
+    }
+
+    /* Dashboard greeting */
+    #greeting {
+        font-size: 28px !important;
+        line-height: 1.15;
+    }
+
+    /* Dashboard stat cards */
+    .card-hover {
+        min-width: 0;
+    }
+
+    /* Filters */
+    #status,
+    #from-date,
+    #to-date {
+        min-height: 46px;
+    }
+
+    /* Tables: keep data readable and allow deliberate horizontal scroll */
+    table {
+        white-space: nowrap;
+    }
+
+    /* Appointment rows / table container */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    /* Better touch targets */
+    button,
+    a {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+        min-height: 44px;
+    }
+
+    /* Avoid decorative artwork taking over small screens */
+    .scissor-icon.absolute {
+        opacity: 0.5;
+        transform: scale(.7);
+    }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+    main {
+        padding: 10px !important;
+    }
+
+    .p-6 {
+        padding: 16px !important;
+    }
+
+    .p-8 {
+        padding: 18px !important;
+    }
+
+    #greeting {
+        font-size: 25px !important;
+    }
+}
+
+/* LOGIN MOBILE SIZING */
+
+@media (max-width: 1023px) {
+    #login-card {
+        max-width: 430px;
+    }
+}
+@media (max-width: 480px) {
+    #login-card {
+        max-width: 100%;
+    }
+
+    #login-card > .bg-white {
+        padding: 22px !important;
+        border-radius: 22px !important;
+    }
+}
+
 </style>
 </head>
 
