@@ -5,7 +5,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date
-
+from pydantic import BaseModel
 from database import SessionLocal
 
 from models import (
@@ -22,7 +22,8 @@ router = APIRouter(
     prefix="/admin",
     tags=["admin"]
 )
-
+class FCMTokenRequest(BaseModel):
+    fcm_token: str
 
 # ==========================================================
 # DATABASE SESSION
@@ -215,3 +216,20 @@ def get_appointments(
     # ======================================================
 
     return result
+
+
+@router.post("/fcm-token")
+def save_fcm_token(
+    payload: FCMTokenRequest,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+
+    current_admin.fcm_token = payload.fcm_token
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "FCM token saved"
+    }

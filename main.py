@@ -2,6 +2,7 @@ import re
 import os
 import requests
 from dotenv import load_dotenv
+from firebase_service import send_admin_notification
 import json
 import logging
 import base64
@@ -19,7 +20,8 @@ from models import (
     Appointment,
     Branch,
     Service,
-    FlowSession
+    FlowSession,
+    Admin
 )
 
 from zoneinfo import ZoneInfo
@@ -1111,6 +1113,26 @@ async def whatsapp_flow(
                                         start_time,
                                         end_time
                                     )
+                                    admin = (
+                                        db.query(Admin)
+                                        .filter(
+                                            Admin.is_active == True,
+                                            Admin.fcm_token.isnot(None)
+                                        )
+                                        .first()
+                                    )
+
+                                    if admin and admin.fcm_token:
+                                        try:
+                                            send_admin_notification(
+                                                admin.fcm_token,
+                                                appointment,
+                                                user,
+                                                branch,
+                                                service
+                                            )
+                                        except Exception:
+                                            logger.exception("FCM notification failed")
 
                                     # ==================================================
                                     # MARK FLOW SESSION COMPLETE

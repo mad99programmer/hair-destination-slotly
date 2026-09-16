@@ -28,6 +28,7 @@ class Admin(Base):
     password_hash = Column(String, nullable=False)
 
     is_active = Column(Boolean, default=True)
+    fcm_token = Column(String(500), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

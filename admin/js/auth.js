@@ -2,7 +2,47 @@ const API = "https://slotly-usly.onrender.com";
 //const API = "http://127.0.0.1:8000";
 
 
+// ==========================================================
+// FCM TOKEN
+// ==========================================================
 
+async function saveFcmToken(token) {
+
+    if (!token) {
+        console.log("FCM token is empty");
+        return;
+    }
+
+    try {
+
+        const response = await apiPost(
+            "/admin/fcm-token",
+            {
+                fcm_token: token
+            }
+        );
+
+        if (response && response.ok) {
+
+            console.log(
+                "FCM token saved successfully"
+            );
+
+        } else {
+
+            console.error(
+                "Failed to save FCM token"
+            );
+        }
+
+    } catch (err) {
+
+        console.error(
+            "FCM token save error:",
+            err
+        );
+    }
+}
 // ==========================================================
 // TOKEN
 // ==========================================================
@@ -128,7 +168,18 @@ async function login() {
             "token",
             data.access_token
         );
+        // Save FCM token after successful login
+        if (
+            window.SlotlyNative &&
+            typeof window.SlotlyNative.getFcmToken === "function"
+        ) {
+            const fcmToken =
+                window.SlotlyNative.getFcmToken();
 
+            if (fcmToken) {
+                await saveFcmToken(fcmToken);
+            }
+        }
 
         window.location.href =
             "/admin/dashboard/";
