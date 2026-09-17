@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 from datetime import date
 from pydantic import BaseModel
 from database import SessionLocal
-
+from fastapi import APIRouter, Depends, HTTPException
 from models import (
     User,
     Branch,
     Service,
-    Appointment
+    Appointment,
+    Admin
 )
 
 from security import get_current_admin
@@ -217,7 +218,6 @@ def get_appointments(
 
     return result
 
-
 @router.post("/fcm-token")
 def save_fcm_token(
     payload: FCMTokenRequest,
@@ -225,12 +225,22 @@ def save_fcm_token(
     db: Session = Depends(get_db)
 ):
 
-    current_admin.fcm_token = payload.fcm_token
+    admin = (
+        db.query(Admin)
+        .filter(Admin.id == current_admin.id)
+        .first()
+    )
+
+    if not admin:
+        raise HTTPException(
+            status_code=401,
+            detail="Admin not found"
+        )
+
+    admin.fcm_token = payload.fcm_token
 
     db.commit()
-    db.refresh(current_admin)
 
-    print("SAVED FCM TOKEN:", current_admin.fcm_token)
     return {
         "success": True,
         "message": "FCM token saved"
