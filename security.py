@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException
 from models import Admin
 from database import SessionLocal
-
+from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login"
@@ -55,7 +55,7 @@ def verify_token(token: str):
         algorithms=[ALGORITHM]
     )
 
-
+'''
 def get_current_admin(
     token: str = Depends(oauth2_scheme)
 ):
@@ -86,6 +86,45 @@ def get_current_admin(
             )
 
         return admin
+
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+'''
+
+def get_current_admin(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(lambda: SessionLocal())
+):
+    try:
+        payload = verify_token(token)
+
+        admin_id = payload.get("admin_id")
+
+        if not admin_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token"
+            )
+
+        admin = (
+            db.query(Admin)
+            .filter(Admin.id == admin_id)
+            .first()
+        )
+
+        if not admin:
+            raise HTTPException(
+                status_code=401,
+                detail="Admin not found"
+            )
+
+        return admin
+
+    except HTTPException:
+        raise
 
     except Exception:
         raise HTTPException(

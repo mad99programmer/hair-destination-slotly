@@ -228,7 +228,9 @@ def save_fcm_token(
     current_admin.fcm_token = payload.fcm_token
 
     db.commit()
+    db.refresh(current_admin)
 
+    print("SAVED FCM TOKEN:", current_admin.fcm_token)
     return {
         "success": True,
         "message": "FCM token saved"
