@@ -42,6 +42,7 @@ from messaging import send_reply
 from handlers import process_message
 import time
 load_dotenv()
+ZERNIO_API_KEY = os.getenv("ZERNIO_API_KEY")
 BUSINESS_ID = int(
     os.getenv("BUSINESS_ID", "1")
 )
