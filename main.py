@@ -57,8 +57,7 @@ logging.basicConfig(
 logger = logging.getLogger(
     "hair-destination-slotly"
 )
-
-def send_typing_indicator(conversation_id: str):
+def send_typing_indicator(conversation_id: str, account_id: str):
     try:
         url = (
             f"https://api.zernio.com/v1/inbox/conversations/"
@@ -66,13 +65,18 @@ def send_typing_indicator(conversation_id: str):
         )
 
         headers = {
-            "Authorization": f"Bearer {os.getenv('ZERNIO_API_KEY')}",
+            "Authorization": f"Bearer {ZERNIO_API_KEY}",
             "Content-Type": "application/json",
+        }
+
+        payload = {
+            "accountId": account_id
         }
 
         response = requests.post(
             url,
             headers=headers,
+            json=payload,
             timeout=5
         )
 
@@ -83,8 +87,9 @@ def send_typing_indicator(conversation_id: str):
         )
 
     except Exception:
-        # Typing indicator should NEVER break chatbot
         logger.exception("[ZERNIO] Typing indicator failed")
+
+
 # ==========================================================
 # FASTAPI
 # ==========================================================
@@ -1464,7 +1469,7 @@ async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
         conversation_id = message.get("conversationId")
         account_id = account.get("id")
         if conversation_id:
-            send_typing_indicator(conversation_id)
+            send_typing_indicator(conversation_id,account_id)
         process_start = time.perf_counter()
         reply = process_message(user_number, incoming_msg, db,webhook_data=payload)
         process_time = (
