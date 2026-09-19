@@ -1001,30 +1001,10 @@ async def whatsapp_flow(
                                     )
 
                                     response_data = {
-
-                                        "screen": "SESSION",
-
+                                        "version": "3.0",
+                                        "screen": "BOOKING_FAILURE",
                                         "data": {
-
-                                            "name": name,
-
-                                            "branch_id": str(
-                                                branch_id
-                                            ),
-
-                                            "service_id": str(
-                                                service_id
-                                            ),
-
-                                            "branch": branch.name,
-
-                                            "service": service.name,
-
-                                            "date": (
-                                                appointment_date.isoformat()
-                                            ),
-
-                                            "available_slots": []
+                                            "message": "Sorry, this slot has just been booked by someone else."
                                         }
                                     }
 

@@ -7,17 +7,22 @@
       "SESSION"
     ],
     "SESSION": [
+      "BOOKING_CONFIRMATION"
+    ],
+    "BOOKING_CONFIRMATION": [
       "BOOKING_SUCCESS"
     ],
     "BOOKING_SUCCESS": []
   },
 
   "screens": [
+
     {
       "id": "BOOKING_DETAILS",
       "title": "Book Appointment",
 
       "data": {
+
         "name": {
           "type": "string",
           "__example__": ""
@@ -88,6 +93,7 @@
         "type": "SingleColumnLayout",
 
         "children": [
+
           {
             "type": "Form",
             "name": "booking_form",
@@ -97,6 +103,7 @@
             },
 
             "children": [
+
               {
                 "type": "TextInput",
                 "label": "Name",
@@ -144,40 +151,53 @@
                   }
                 }
               }
+
             ]
           }
+
         ]
       }
     },
+
 
     {
       "id": "SESSION",
       "title": "Select Time",
 
       "data": {
+
         "name": {
           "type": "string",
-          "__example__": "Mitul"
+          "__example__": "Mitul Shelatkar"
         },
 
         "branch_id": {
           "type": "string",
-          "__example__": "1"
+          "__example__": "2"
         },
 
         "service_id": {
           "type": "string",
-          "__example__": "1"
+          "__example__": "5"
+        },
+
+        "branch": {
+          "type": "string",
+          "__example__": "Malad"
+        },
+
+        "service": {
+          "type": "string",
+          "__example__": "Consultation"
         },
 
         "date": {
           "type": "string",
-          "__example__": "2026-09-06"
+          "__example__": "2026-09-29"
         },
 
         "available_slots": {
           "type": "array",
-
           "items": {
             "type": "object",
             "properties": {
@@ -211,11 +231,13 @@
         "type": "SingleColumnLayout",
 
         "children": [
+
           {
             "type": "Form",
             "name": "session_form",
 
             "children": [
+
               {
                 "type": "RadioButtonsGroup",
                 "label": "Available Slots",
@@ -226,25 +248,164 @@
 
               {
                 "type": "Footer",
-                "label": "Confirm Booking",
+                "label": "Continue",
 
                 "on-click-action": {
-                  "name": "data_exchange",
+                  "name": "navigate",
+
+                  "next": {
+                    "type": "screen",
+                    "name": "BOOKING_CONFIRMATION"
+                  },
 
                   "payload": {
                     "name": "${data.name}",
                     "branch_id": "${data.branch_id}",
                     "service_id": "${data.service_id}",
+                    "branch": "${data.branch}",
+                    "service": "${data.service}",
                     "date": "${data.date}",
                     "selected_slot": "${form.selected_slot}"
                   }
                 }
               }
+
             ]
           }
+
         ]
       }
     },
+
+
+    {
+      "id": "BOOKING_CONFIRMATION",
+      "title": "Confirm Appointment",
+
+      "data": {
+
+        "name": {
+          "type": "string",
+          "__example__": "Mitul Shelatkar"
+        },
+
+        "branch_id": {
+          "type": "string",
+          "__example__": "2"
+        },
+
+        "service_id": {
+          "type": "string",
+          "__example__": "5"
+        },
+
+        "branch": {
+          "type": "string",
+          "__example__": "Malad"
+        },
+
+        "service": {
+          "type": "string",
+          "__example__": "Consultation"
+        },
+
+        "date": {
+          "type": "string",
+          "__example__": "2026-09-29"
+        },
+
+        "selected_slot": {
+          "type": "string",
+          "__example__": "1400_1500"
+        }
+      },
+
+      "layout": {
+        "type": "SingleColumnLayout",
+
+        "children": [
+
+          {
+            "type": "TextHeading",
+            "text": "Confirm Appointment"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "Please review your appointment details before confirming."
+          },
+
+          {
+            "type": "TextBody",
+            "text": "👤 Name"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "${data.name}"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "📍 Branch"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "${data.branch}"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "💇 Service"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "${data.service}"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "📅 Date"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "${data.date}"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "🕒 Time"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "${data.selected_slot}"
+          },
+
+          {
+            "type": "Footer",
+            "label": "Confirm Booking",
+
+            "on-click-action": {
+              "name": "data_exchange",
+
+              "payload": {
+                "name": "${data.name}",
+                "branch_id": "${data.branch_id}",
+                "service_id": "${data.service_id}",
+                "date": "${data.date}",
+                "selected_slot": "${data.selected_slot}"
+              }
+            }
+          }
+
+        ]
+      }
+    },
+
 
     {
       "id": "BOOKING_SUCCESS",
@@ -253,6 +414,7 @@
       "success": true,
 
       "data": {
+
         "appointment_id": {
           "type": "string",
           "__example__": "123"
@@ -283,6 +445,7 @@
         "type": "SingleColumnLayout",
 
         "children": [
+
           {
             "type": "TextHeading",
             "text": "Booking Confirmed 🎉"
@@ -347,8 +510,10 @@
               "payload": {}
             }
           }
+
         ]
       }
     }
+
   ]
 }
