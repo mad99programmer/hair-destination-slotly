@@ -24,7 +24,7 @@ from models import (
     FlowSession,
     Admin
 )
-
+from sqlalchemy import text
 from zoneinfo import ZoneInfo
 from db_queries import (
     get_branches,
@@ -950,6 +950,23 @@ async def whatsapp_flow(
                                 # Another user may have booked this slot
                                 # while this user was on confirmation screen.
                                 # ==================================================
+                                # ==================================================
+                                # LOCK THIS EXACT BOOKING SLOT
+                                # ==================================================
+
+                                lock_key = (
+                                    f"{branch_id}:{appointment_date.isoformat()}:{start_time}"
+                                )
+
+                                db.execute(
+                                    text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+                                    {"lock_key": lock_key}
+                                )
+
+                                logger.info(
+                                    "Booking slot locked | key=%s",
+                                    lock_key
+                                )
 
                                 booked_count = (
                                     db.query(Appointment)
