@@ -1125,18 +1125,26 @@ async def whatsapp_flow(
                                     )
 
                                     if admin and admin.fcm_token:
-                                        try:
-                                            notification_executor.submit(
-                                                send_admin_notification,
-                                                admin.fcm_token,
-                                                appointment,
-                                                user,
-                                                branch,
-                                                service
-                                            )
-                                        except Exception:
-                                            logger.exception("FCM notification failed")
 
+                                        # Extract plain Python values BEFORE background thread
+                                        fcm_token = admin.fcm_token
+                                        appointment_id = appointment.id
+                                        user_name = user.name
+                                        service_name = service.name
+                                        branch_name = branch.name
+                                        appointment_date = str(appointment.appointment_date)
+                                        start_time = appointment.start_time.strftime("%I:%M %p")
+
+                                        notification_executor.submit(
+                                            send_admin_notification,
+                                            fcm_token,
+                                            appointment_id,
+                                            user_name,
+                                            service_name,
+                                            branch_name,
+                                            appointment_date,
+                                            start_time
+                                        )
                                     # ==================================================
                                     # MARK FLOW SESSION COMPLETE
                                     # ==================================================
