@@ -1095,6 +1095,11 @@ async def whatsapp_flow(
                                     db.refresh(
                                         appointment
                                     )
+                                    flow_session.completed = True
+                                    flow_session.completed_at = datetime.now(timezone.utc)
+
+                                    db.commit()
+                                    db.refresh(appointment)
 
                                     logger.info(
                                         "APPOINTMENT BOOKED SUCCESSFULLY | "
@@ -1145,17 +1150,8 @@ async def whatsapp_flow(
                                             appointment_date,
                                             start_time
                                         )
-                                    # ==================================================
-                                    # MARK FLOW SESSION COMPLETE
-                                    # ==================================================
-
-                                    flow_session.completed = True
-
-                                    flow_session.completed_at = (
-                                        datetime.now(timezone.utc)
-                                    )
-
-                                    db.commit()
+                                        logger.info("[FCM] Notification submitted to background")
+                                    
 
                                     # ==================================================
                                     # SUCCESS SCREEN
