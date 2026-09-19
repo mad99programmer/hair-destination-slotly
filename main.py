@@ -42,7 +42,7 @@ from messaging import send_reply, send_typing_indicator
 from handlers import process_message
 import time
 load_dotenv()
-ZERNIO_API_KEY = os.getenv("ZERNIO_API_KEY")
+
 BUSINESS_ID = int(
     os.getenv("BUSINESS_ID", "1")
 )
@@ -58,38 +58,6 @@ logging.basicConfig(
 logger = logging.getLogger(
     "hair-destination-slotly"
 )
-def send_typing_indicator(conversation_id: str, account_id: str):
-    try:
-        url = (
-            f"https://api.zernio.com/v1/inbox/conversations/"
-            f"{conversation_id}/typing"
-        )
-
-        headers = {
-            "Authorization": f"Bearer {ZERNIO_API_KEY}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "accountId": account_id
-        }
-
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=5
-        )
-
-        logger.info(
-            "[ZERNIO] Typing indicator | status=%s | response=%s",
-            response.status_code,
-            response.text
-        )
-
-    except Exception:
-        logger.exception("[ZERNIO] Typing indicator failed")
-
 
 # ==========================================================
 # FASTAPI
