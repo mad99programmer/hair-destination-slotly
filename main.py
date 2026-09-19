@@ -6,6 +6,7 @@ from firebase_service import send_admin_notification
 import json
 import logging
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, date, timedelta
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import PlainTextResponse
@@ -46,6 +47,7 @@ load_dotenv()
 BUSINESS_ID = int(
     os.getenv("BUSINESS_ID", "1")
 )
+notification_executor = ThreadPoolExecutor(max_workers=4)
 # ==========================================================
 # LOGGING
 # ==========================================================
@@ -1124,7 +1126,8 @@ async def whatsapp_flow(
 
                                     if admin and admin.fcm_token:
                                         try:
-                                            send_admin_notification(
+                                            notification_executor.submit(
+                                                send_admin_notification,
                                                 admin.fcm_token,
                                                 appointment,
                                                 user,
