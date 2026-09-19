@@ -38,7 +38,7 @@ from flow_crypto import (
     decrypt_flow_data,
     encrypt_response
 )
-from messaging import send_reply
+from messaging import send_reply, send_typing_indicator
 from handlers import process_message
 import time
 load_dotenv()
