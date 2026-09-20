@@ -858,6 +858,78 @@ button, input, select, textarea {
 </div>
 
 
+<!-- =====================================================
+     CONFIRM MODAL
+     (used instead of window.confirm() — most Android
+     WebView wrappers don't implement the native JS
+     dialog callback, so confirm()/alert() silently do
+     nothing there)
+====================================================== -->
+
+<div
+    id="confirm-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+>
+
+    <div
+        id="confirm-modal-backdrop"
+        class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+    ></div>
+
+    <div
+        class="relative bg-white rounded-3xl shadow-xl border
+               border-slate-100 max-w-sm w-full p-6"
+    >
+
+        <h3 class="font-display text-lg font-bold text-slate-900">
+            Cancel appointment?
+        </h3>
+
+        <p id="confirm-modal-message" class="text-sm text-slate-500 mt-2">
+            This cannot be undone.
+        </p>
+
+        <div class="mt-6 flex gap-3">
+
+            <button
+                id="confirm-modal-dismiss"
+                type="button"
+                class="flex-1 border border-slate-200 text-slate-600
+                       hover:bg-slate-50 py-2.5 rounded-xl text-sm
+                       font-semibold min-h-[44px]"
+            >
+                Keep appointment
+            </button>
+
+            <button
+                id="confirm-modal-confirm"
+                type="button"
+                class="flex-1 bg-rose-600 hover:bg-rose-700 text-white
+                       py-2.5 rounded-xl text-sm font-semibold min-h-[44px]"
+            >
+                Yes, cancel
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     TOAST
+     (used instead of window.alert() for the same reason)
+====================================================== -->
+
+<div
+    id="toast"
+    class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50
+           max-w-[90vw] px-4 py-3 rounded-xl text-sm font-semibold
+           shadow-lg text-center"
+></div>
+
+
 <!-- ==========================================================
      JAVASCRIPT
 ========================================================== -->
@@ -1803,6 +1875,120 @@ function resetFilters() {
 
 
 // ==========================================================
+// CONFIRM MODAL (in-page, not window.confirm())
+//
+// window.confirm() relies on the host app's WebChromeClient
+// implementing onJsConfirm(); most Android WebView wrappers
+// don't, so it silently resolves to false with no dialog
+// ever shown. This renders the same yes/no choice as normal
+// page content instead, so it always works.
+//
+// Returns a Promise<boolean> — true if "Yes, cancel" was
+// clicked, false for "Keep appointment" or tapping the
+// backdrop.
+// ==========================================================
+
+function showConfirmDialog(message) {
+
+    return new Promise(function (resolve) {
+
+        const modal =
+            document.getElementById("confirm-modal");
+
+        const messageEl =
+            document.getElementById("confirm-modal-message");
+
+        const dismissBtn =
+            document.getElementById("confirm-modal-dismiss");
+
+        const confirmBtn =
+            document.getElementById("confirm-modal-confirm");
+
+        const backdrop =
+            document.getElementById("confirm-modal-backdrop");
+
+
+        messageEl.textContent = message;
+
+        modal.classList.remove("hidden");
+
+
+        function cleanup(result) {
+
+            modal.classList.add("hidden");
+
+            dismissBtn.removeEventListener("click", onDismiss);
+            confirmBtn.removeEventListener("click", onConfirm);
+            backdrop.removeEventListener("click", onDismiss);
+
+            resolve(result);
+
+        }
+
+
+        function onDismiss() {
+
+            cleanup(false);
+
+        }
+
+
+        function onConfirm() {
+
+            cleanup(true);
+
+        }
+
+
+        dismissBtn.addEventListener("click", onDismiss);
+        confirmBtn.addEventListener("click", onConfirm);
+        backdrop.addEventListener("click", onDismiss);
+
+    });
+
+}
+
+
+// ==========================================================
+// TOAST (in-page, not window.alert())
+//
+// Same reasoning as the confirm modal above — alert() is
+// unreliable inside a WebView wrapper, so this shows a
+// small message at the bottom of the screen instead.
+// ==========================================================
+
+let toastHideTimer = null;
+
+function showToast(message, variant) {
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent = message;
+
+    const variantClasses =
+        variant === "error"
+            ? "bg-rose-600 text-white"
+            : "bg-slate-900 text-white";
+
+    toast.className =
+        "fixed bottom-5 left-1/2 -translate-x-1/2 z-50 " +
+        "max-w-[90vw] px-4 py-3 rounded-xl text-sm " +
+        "font-semibold shadow-lg text-center " +
+        variantClasses;
+
+    clearTimeout(toastHideTimer);
+
+    toastHideTimer = setTimeout(function () {
+
+        toast.classList.add("hidden");
+
+    }, 3500);
+
+}
+
+
+// ==========================================================
 // CANCEL APPOINTMENT
 //
 // Calls the existing backend endpoint:
@@ -1816,7 +2002,7 @@ function resetFilters() {
 
 async function cancelAppointment(appointmentId, triggerEl) {
 
-    const confirmed = window.confirm(
+    const confirmed = await showConfirmDialog(
         "Cancel this appointment? This cannot be undone."
     );
 
@@ -1844,6 +2030,11 @@ async function cancelAppointment(appointmentId, triggerEl) {
             {}
         );
 
+        showToast(
+            "Appointment cancelled.",
+            "success"
+        );
+
         // Reload from the server so the table, cards, and count
         // all reflect the new status — this also re-applies the
         // current status/date filters and the search box.
@@ -1858,8 +2049,9 @@ async function cancelAppointment(appointmentId, triggerEl) {
             error
         );
 
-        alert(
-            `Failed to cancel appointment: ${error.message}`
+        showToast(
+            `Failed to cancel appointment: ${error.message}`,
+            "error"
         );
 
         if (triggerEl) {
