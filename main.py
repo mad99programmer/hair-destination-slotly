@@ -222,7 +222,6 @@ async def health_check():
 async def whatsapp_flow(
     request: Request
 ):
-
     try:
 
         # ==================================================
@@ -571,156 +570,243 @@ async def whatsapp_flow(
 
                             else:
 
-                                # ------------------------------------------
-                                # GET AVAILABLE SLOTS
-                                # ------------------------------------------
+                                # ==================================================
+                                # RESOLVE USER PHONE FROM FLOW SESSION
+                                # ==================================================
 
-                                available_slots = get_available_slots(
-                                    db=db,
-                                    branch_id=branch_id,
-                                    slot_date=appointment_date
+                                flow_token = decrypted_data.get(
+                                    "flow_token",
+                                    ""
                                 )
 
-                                logger.info(
-                                    "Backend returned %d available slots.",
-                                    len(available_slots)
+                                session_id = (
+                                    flow_token.split(":", 1)[1]
+                                    if ":" in flow_token
+                                    else flow_token
                                 )
 
-                                # ------------------------------------------
-                                # RAW SLOT LOG
-                                # ------------------------------------------
-
-                                logger.info(
-                                    "AVAILABLE SLOTS RAW:\n%s",
-                                    json.dumps(
-                                        [
-                                            str(item)
-                                            for item in available_slots
-                                        ],
-                                        indent=2
+                                flow_session = (
+                                    db.query(FlowSession)
+                                    .filter(
+                                        FlowSession.session_id == session_id
                                     )
+                                    .first()
                                 )
 
-                                # ------------------------------------------
-                                # BUILD FLOW OPTIONS
-                                # ------------------------------------------
-
-                                slots = []
-
-                                now_ist = datetime.now(
-                                    ZoneInfo("Asia/Kolkata")
-                                )
-
-                                today_ist = now_ist.date()
-
-                                for item in available_slots:
-
-                                    # --------------------------------------
-                                    # GET SLOT DATA
-                                    # --------------------------------------
-
-                                    start_time = item[
-                                        "start_time"
-                                    ]
-
-                                    end_time = item[
-                                        "end_time"
-                                    ]
-
-                                    remaining = item[
-                                        "remaining"
-                                    ]
-
-                                    # --------------------------------------
-                                    # HIDE PAST SLOTS FOR TODAY
-                                    # --------------------------------------
-
-                                    if appointment_date == today_ist:
-
-                                        if start_time <= now_ist.time():
-                                            continue
-
-                                    # --------------------------------------
-                                    # SAFETY
-                                    # --------------------------------------
-
-                                    if remaining <= 0:
-                                        continue
-
-                                    # --------------------------------------
-                                    # FORMAT TIME
-                                    # --------------------------------------
-
-                                    start = start_time.strftime(
-                                        "%I:%M %p"
-                                    )
-
-                                    end = end_time.strftime(
-                                        "%I:%M %p"
-                                    )
-
-                                    # --------------------------------------
-                                    # DISPLAY SLOT
-                                    # --------------------------------------
-
-                                    display_title = (
-                                        f"{start} - {end}   "
-                                        f"{'🪑 ' * remaining}"
-                                    ).strip()
-
-                                    slots.append({
-                                        "id": display_title,
-                                        "title": display_title
-                                    })
-
-                                # ------------------------------------------
-                                # SESSION RESPONSE
-                                # ------------------------------------------
-
-                                response_data = {
-
-                                    "version": "3.0",
-
-                                    "screen": "SESSION",
-
-                                    "data": {
-
-                                        "name": name,
-
-                                        "branch_id": str(
-                                            branch_id
-                                        ),
-
-                                        "service_id": str(
-                                            service_id
-                                        ),
-
-                                        "branch": branch.name,
-
-                                        "service": service.name,
-
-                                        "date": (
-                                            appointment_date.isoformat()
-                                        ),
-
-                                        "available_slots": slots
-                                    }
-                                }
-
-                                logger.info(
-                                    "Returning %d slots to SESSION.",
-                                    len(slots)
-                                )
-
-                                # ------------------------------------------
-                                # NO SLOTS
-                                # ------------------------------------------
-
-                                if not slots:
+                                if not flow_session:
 
                                     logger.warning(
-                                        "No available slots found."
+                                        "FlowSession not found | session_id=%s",
+                                        session_id
                                     )
+
+                                    response_data = {
+                                        "screen": "BOOKING_DETAILS",
+                                        "data": {}
+                                    }
+
+                                else:
+
+                                    user_number = (
+                                        flow_session.phone_number
+                                    )
+
+                                    logger.info(
+                                        "Resolved user for BOOKING_DETAILS | "
+                                        "session_id=%s | phone=%s",
+                                        session_id,
+                                        user_number
+                                    )
+
+                                    # ==================================================
+                                    # CHECK USER ALREADY BOOKED ON THIS DATE
+                                    #
+                                    # IMPORTANT:
+                                    # This is only an early check.
+                                    # Final safety check remains in
+                                    # BOOKING_CONFIRMATION.
+                                    # ==================================================
+
+                                    existing_appointment = (
+                                        db.query(Appointment)
+                                        .join(
+                                            User,
+                                            Appointment.user_id == User.id
+                                        )
+                                        .filter(
+                                            User.phone_number == user_number,
+                                            Appointment.appointment_date == appointment_date,
+                                            Appointment.status == "booked"
+                                        )
+                                        .first()
+                                    )
+
+                                    if existing_appointment:
+
+                                        logger.warning(
+                                            "USER ALREADY BOOKED ON DATE | "
+                                            "phone=%s | date=%s | appointment_id=%s",
+                                            user_number,
+                                            appointment_date,
+                                            existing_appointment.id
+                                        )
+
+                                        response_data = {
+                                            "version": "3.0",
+                                            "screen": "USER_ALREADY_BOOKED",
+                                            "data": {
+                                                "date": (
+                                                    existing_appointment
+                                                    .appointment_date
+                                                    .strftime("%d %B %Y")
+                                                ),
+                                                "time": (
+                                                    f"{existing_appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
+                                                    f"{existing_appointment.end_time.strftime('%I:%M %p').lstrip('0')}"
+                                                ),
+                                                "branch": branch.name,
+                                                "service": service.name
+                                            }
+                                        }
+
+                                    else:
+
+                                        # ==================================================
+                                        # GET AVAILABLE SLOTS
+                                        # ==================================================
+
+                                        available_slots = get_available_slots(
+                                            db=db,
+                                            branch_id=branch_id,
+                                            slot_date=appointment_date
+                                        )
+
+                                        logger.info(
+                                            "Backend returned %d available slots.",
+                                            len(available_slots)
+                                        )
+
+                                        # ------------------------------------------
+                                        # RAW SLOT LOG
+                                        # ------------------------------------------
+
+                                        logger.info(
+                                            "AVAILABLE SLOTS RAW:\n%s",
+                                            json.dumps(
+                                                [
+                                                    str(item)
+                                                    for item in available_slots
+                                                ],
+                                                indent=2
+                                            )
+                                        )
+
+                                        # ------------------------------------------
+                                        # BUILD FLOW OPTIONS
+                                        # ------------------------------------------
+
+                                        slots = []
+
+                                        now_ist = datetime.now(
+                                            ZoneInfo("Asia/Kolkata")
+                                        )
+
+                                        today_ist = now_ist.date()
+
+                                        for item in available_slots:
+
+                                            start_time = item[
+                                                "start_time"
+                                            ]
+
+                                            end_time = item[
+                                                "end_time"
+                                            ]
+
+                                            remaining = item[
+                                                "remaining"
+                                            ]
+
+                                            # --------------------------------------
+                                            # HIDE PAST SLOTS FOR TODAY
+                                            # --------------------------------------
+
+                                            if appointment_date == today_ist:
+
+                                                if start_time <= now_ist.time():
+                                                    continue
+
+                                            # --------------------------------------
+                                            # SAFETY
+                                            # --------------------------------------
+
+                                            if remaining <= 0:
+                                                continue
+
+                                            # --------------------------------------
+                                            # FORMAT TIME
+                                            # --------------------------------------
+
+                                            start = start_time.strftime(
+                                                "%I:%M %p"
+                                            )
+
+                                            end = end_time.strftime(
+                                                "%I:%M %p"
+                                            )
+
+                                            # --------------------------------------
+                                            # DISPLAY SLOT
+                                            # --------------------------------------
+
+                                            display_title = (
+                                                f"{start} - {end}   "
+                                                f"{'🪑 ' * remaining}"
+                                            ).strip()
+
+                                            slots.append({
+                                                "id": display_title,
+                                                "title": display_title
+                                            })
+
+                                        # ------------------------------------------
+                                        # SESSION RESPONSE
+                                        # ------------------------------------------
+
+                                        response_data = {
+                                            "version": "3.0",
+                                            "screen": "SESSION",
+                                            "data": {
+                                                "name": name,
+                                                "branch_id": str(
+                                                    branch_id
+                                                ),
+                                                "service_id": str(
+                                                    service_id
+                                                ),
+                                                "branch": branch.name,
+                                                "service": service.name,
+                                                "date": (
+                                                    appointment_date.isoformat()
+                                                ),
+                                                "available_slots": slots
+                                            }
+                                        }
+
+                                        logger.info(
+                                            "Returning %d slots to SESSION.",
+                                            len(slots)
+                                        )
+
+                                        # ------------------------------------------
+                                        # NO SLOTS
+                                        # ------------------------------------------
+
+                                        if not slots:
+
+                                            logger.warning(
+                                                "No available slots found."
+                                            )
 
                     except Exception:
 
@@ -852,9 +938,6 @@ async def whatsapp_flow(
 
                         # ==================================================
                         # PARSE DISPLAY SLOT
-                        #
-                        # Example:
-                        # 02:00 PM - 03:00 PM 🪑 🪑 🪑
                         # ==================================================
 
                         try:
@@ -943,30 +1026,33 @@ async def whatsapp_flow(
                             else:
 
                                 # ==================================================
-                                # CHECK SLOT CAPACITY AGAIN
-                                #
-                                # VERY IMPORTANT
-                                #
-                                # Another user may have booked this slot
-                                # while this user was on confirmation screen.
-                                # ==================================================
-                                # ==================================================
                                 # LOCK THIS EXACT BOOKING SLOT
                                 # ==================================================
 
                                 lock_key = (
-                                    f"{branch_id}:{appointment_date.isoformat()}:{start_time}"
+                                    f"{branch_id}:"
+                                    f"{appointment_date.isoformat()}:"
+                                    f"{start_time}"
                                 )
 
                                 db.execute(
-                                    text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
-                                    {"lock_key": lock_key}
+                                    text(
+                                        "SELECT pg_advisory_xact_lock("
+                                        "hashtext(:lock_key))"
+                                    ),
+                                    {
+                                        "lock_key": lock_key
+                                    }
                                 )
 
                                 logger.info(
                                     "Booking slot locked | key=%s",
                                     lock_key
                                 )
+
+                                # ==================================================
+                                # CHECK SLOT CAPACITY
+                                # ==================================================
 
                                 booked_count = (
                                     db.query(Appointment)
@@ -1004,7 +1090,10 @@ async def whatsapp_flow(
                                         "version": "3.0",
                                         "screen": "BOOKING_FAILURE",
                                         "data": {
-                                            "message": "Sorry, this slot has just been booked by someone else."
+                                            "message": (
+                                                "Sorry, this slot has just "
+                                                "been booked by someone else."
+                                            )
                                         }
                                     }
 
@@ -1031,10 +1120,7 @@ async def whatsapp_flow(
                                             user_number
                                         )
 
-                                        # Update name
                                         user.name = name
-
-                                        # Keep business association current
                                         user.business_id = BUSINESS_ID
 
                                     else:
@@ -1055,11 +1141,11 @@ async def whatsapp_flow(
                                             user
                                         )
 
-                                        # Get generated user.id
                                         db.flush()
-                                    #
+
                                     # ==================================================
-                                    # CHECK USER ALREADY BOOKED ON THIS DATE
+                                    # FINAL SAFETY CHECK:
+                                    # USER ALREADY BOOKED ON THIS DATE
                                     # ==================================================
 
                                     existing_appointment = (
@@ -1083,10 +1169,13 @@ async def whatsapp_flow(
                                         )
 
                                         response_data = {
+                                            "version": "3.0",
                                             "screen": "USER_ALREADY_BOOKED",
                                             "data": {
-                                                "date": existing_appointment.appointment_date.strftime(
-                                                    "%d %B %Y"
+                                                "date": (
+                                                    existing_appointment
+                                                    .appointment_date
+                                                    .strftime("%d %B %Y")
                                                 ),
                                                 "time": (
                                                     f"{existing_appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
@@ -1096,29 +1185,22 @@ async def whatsapp_flow(
                                                 "service": service.name
                                             }
                                         }
+
                                     else:
+
                                         # ==================================================
                                         # CREATE APPOINTMENT
                                         # ==================================================
 
                                         appointment = Appointment(
-
                                             user_id=user.id,
-
                                             business_id=BUSINESS_ID,
-
                                             branch_id=branch_id,
-
                                             service_id=service_id,
-
                                             branch_slot_id=None,
-
                                             appointment_date=appointment_date,
-
                                             start_time=start_time,
-
                                             end_time=end_time,
-
                                             status="booked"
                                         )
 
@@ -1131,11 +1213,18 @@ async def whatsapp_flow(
                                         db.refresh(
                                             appointment
                                         )
+
                                         flow_session.completed = True
-                                        flow_session.completed_at = datetime.now(timezone.utc)
+
+                                        flow_session.completed_at = (
+                                            datetime.now(timezone.utc)
+                                        )
 
                                         db.commit()
-                                        db.refresh(appointment)
+
+                                        db.refresh(
+                                            appointment
+                                        )
 
                                         logger.info(
                                             "APPOINTMENT BOOKED SUCCESSFULLY | "
@@ -1156,6 +1245,11 @@ async def whatsapp_flow(
                                             start_time,
                                             end_time
                                         )
+
+                                        # ==================================================
+                                        # FCM NOTIFICATION
+                                        # ==================================================
+
                                         admin = (
                                             db.query(Admin)
                                             .filter(
@@ -1167,14 +1261,36 @@ async def whatsapp_flow(
 
                                         if admin and admin.fcm_token:
 
-                                            # Extract plain Python values BEFORE background thread
+                                            # Extract plain Python values
+                                            # BEFORE background thread
+
                                             fcm_token = admin.fcm_token
-                                            appointment_id = appointment.id
+
+                                            appointment_id = (
+                                                appointment.id
+                                            )
+
                                             user_name = user.name
-                                            service_name = service.name
-                                            branch_name = branch.name
-                                            appointment_date = str(appointment.appointment_date)
-                                            start_time = appointment.start_time.strftime("%I:%M %p")
+
+                                            service_name = (
+                                                service.name
+                                            )
+
+                                            branch_name = (
+                                                branch.name
+                                            )
+
+                                            appointment_date_str = (
+                                                str(
+                                                    appointment.appointment_date
+                                                )
+                                            )
+
+                                            start_time_str = (
+                                                appointment
+                                                .start_time
+                                                .strftime("%I:%M %p")
+                                            )
 
                                             notification_executor.submit(
                                                 send_admin_notification,
@@ -1183,28 +1299,25 @@ async def whatsapp_flow(
                                                 user_name,
                                                 service_name,
                                                 branch_name,
-                                                appointment_date,
-                                                start_time
+                                                appointment_date_str,
+                                                start_time_str
                                             )
-                                            logger.info("[FCM] Notification submitted to background")
-                                        
+
+                                            logger.info(
+                                                "[FCM] Notification submitted to background"
+                                            )
 
                                         # ==================================================
                                         # SUCCESS SCREEN
                                         # ==================================================
 
                                         response_data = {
-
                                             "version": "3.0",
-
                                             "screen": "BOOKING_SUCCESS",
-
                                             "data": {
-
                                                 "appointment_id": str(
                                                     appointment.id
                                                 ),
-
                                                 "date": (
                                                     appointment
                                                     .appointment_date
@@ -1212,14 +1325,11 @@ async def whatsapp_flow(
                                                         "%d %B %Y"
                                                     )
                                                 ),
-
                                                 "time": (
                                                     f"{appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
                                                     f"{appointment.end_time.strftime('%I:%M %p').lstrip('0')}"
                                                 ),
-
                                                 "branch": branch.name,
-
                                                 "service": service.name
                                             }
                                         }
@@ -1319,201 +1429,3 @@ async def whatsapp_flow(
             content="",
             status_code=500
         )
-# ==========================================================
-# INIT HANDLER
-# ==========================================================
-def handle_init(flow_token=""):
-
-    from database import SessionLocal
-
-    db = SessionLocal()
-
-    try:
-
-        # --------------------------------------------------
-        # RESOLVE USER FROM FLOW TOKEN
-        # --------------------------------------------------
-
-        user_name = ""
-
-        session_id = (
-            flow_token.split(":", 1)[1]
-            if ":" in flow_token
-            else flow_token
-        )
-
-        if session_id:
-
-            flow_session = (
-                db.query(FlowSession)
-                .filter(
-                    FlowSession.session_id == session_id
-                )
-                .first()
-            )
-
-            if flow_session:
-
-                user = (
-                    db.query(User)
-                    .filter(
-                        User.phone_number == flow_session.phone_number
-                    )
-                    .first()
-                )
-
-                if user:
-                    user_name = user.name or ""
-
-                    logger.info(
-                        "Existing user found for Flow | "
-                        "user_id=%s | name=%s",
-                        user.id,
-                        user.name
-                    )
-
-                else:
-                    logger.info(
-                        "New user Flow | phone=%s",
-                        flow_session.phone_number
-                    )
-
-            else:
-                logger.warning(
-                    "FlowSession not found during INIT | session_id=%s",
-                    session_id
-                )
-
-        # --------------------------------------------------
-        # GET BRANCHES
-        # --------------------------------------------------
-
-        branches = get_branches(db)
-
-        # --------------------------------------------------
-        # GET SERVICES
-        # --------------------------------------------------
-
-        services = get_services(db)
-
-        # --------------------------------------------------
-        # BUILD RESPONSE
-        # --------------------------------------------------
-        now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
-
-        if now_ist.hour >= 20:
-            min_date_obj = date.today() + timedelta(days=1)
-        else:
-            min_date_obj = date.today()
-
-        max_date_obj = min_date_obj + timedelta(days=60)
-
-        min_date = min_date_obj.isoformat()
-        max_date = max_date_obj.isoformat()
-
-        response_data = {
-
-            "screen": "BOOKING_DETAILS",
-
-            "data": {
-
-                "name": user_name,
-
-                "branches": branches,
-
-                "services": services,
-
-                "min_date": min_date,
-
-                "max_date": max_date
-
-            }
-
-        }
-
-        logger.info(
-            "INIT loaded %d branches, %d services | name=%s",
-            len(branches),
-            len(services),
-            user_name
-        )
-
-        return response_data
-
-    finally:
-
-        db.close()
-
-# =========================
-# Zernio WEBHOOK
-# =========================
-@app.post("/webhook/zernio")
-async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
-    webhook_start = time.perf_counter()
-    payload = await request.json()
-
-    
-    '''
-    print("RAW PAYLOAD:")
-        print(
-            json.dumps(
-                payload,
-                indent=4,
-                ensure_ascii=False
-            )
-        )
-    '''
-    
-    logger.info(
-        "[WEBHOOK] Received | event=%s",
-        payload.get("event")
-    )
-
-    if payload.get("event") == "message.received":
-        message = payload.get("message", {})
-        account = payload.get("account", {})
-        message_id = message.get("id")
-        #if message_id and is_duplicate(message_id):
-        #    return {"status": "duplicate, skipped"}
-
-        user_number = message.get("sender", {}).get("phoneNumber")
-        incoming_msg = message.get("text", "").strip()
-        conversation_id = message.get("conversationId")
-        account_id = account.get("id")
-        if conversation_id:
-            send_typing_indicator(conversation_id,account_id)
-        process_start = time.perf_counter()
-        reply = process_message(user_number, incoming_msg, db,webhook_data=payload)
-        process_time = (
-            time.perf_counter() - process_start
-        ) * 1000
-
-        logger.info(
-            "[PROCESS] Completed | time=%.2f ms",
-            process_time
-        )
-        send_start = time.perf_counter()
-        print("CONVERSATION ID:", conversation_id)
-        print("ACCOUNT ID:", account_id)
-        if reply is not None:
-            send_reply(conversation_id, account_id, reply)
-        else:
-            logger.info("[ZERNIO] No text reply required | Flow already sent")
-        send_time = (
-            time.perf_counter() - send_start
-        ) * 1000
-        logger.info(
-            "[ZERNIO] Reply completed | time=%.2f ms",
-            send_time
-        )
-
-        total_time = (
-            time.perf_counter() - webhook_start
-        ) * 1000
-
-        logger.info(
-            "[WEBHOOK] Completed | total=%.2f ms",
-            total_time
-        )
-
-    return {"status": "ok"}
