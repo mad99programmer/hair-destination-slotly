@@ -10,9 +10,11 @@
       "BOOKING_CONFIRMATION"
     ],
     "BOOKING_CONFIRMATION": [
-      "BOOKING_SUCCESS"
+      "BOOKING_SUCCESS",
+      "BOOKING_FAILURE"
     ],
-    "BOOKING_SUCCESS": []
+    "BOOKING_SUCCESS": [],
+    "BOOKING_FAILURE": []
   },
 
   "screens": [
@@ -22,7 +24,6 @@
       "title": "Book Appointment",
 
       "data": {
-
         "name": {
           "type": "string",
           "__example__": ""
@@ -93,7 +94,6 @@
         "type": "SingleColumnLayout",
 
         "children": [
-
           {
             "type": "Form",
             "name": "booking_form",
@@ -103,7 +103,6 @@
             },
 
             "children": [
-
               {
                 "type": "TextInput",
                 "label": "Name",
@@ -151,10 +150,8 @@
                   }
                 }
               }
-
             ]
           }
-
         ]
       }
     },
@@ -165,7 +162,6 @@
       "title": "Select Time",
 
       "data": {
-
         "name": {
           "type": "string",
           "__example__": "Mitul Shelatkar"
@@ -198,6 +194,7 @@
 
         "available_slots": {
           "type": "array",
+
           "items": {
             "type": "object",
             "properties": {
@@ -231,13 +228,11 @@
         "type": "SingleColumnLayout",
 
         "children": [
-
           {
             "type": "Form",
             "name": "session_form",
 
             "children": [
-
               {
                 "type": "RadioButtonsGroup",
                 "label": "Available Slots",
@@ -269,10 +264,8 @@
                   }
                 }
               }
-
             ]
           }
-
         ]
       }
     },
@@ -283,7 +276,6 @@
       "title": "Confirm Appointment",
 
       "data": {
-
         "name": {
           "type": "string",
           "__example__": "Mitul Shelatkar"
@@ -324,7 +316,6 @@
         "type": "SingleColumnLayout",
 
         "children": [
-
           {
             "type": "TextHeading",
             "text": "Confirm Appointment"
@@ -401,7 +392,6 @@
               }
             }
           }
-
         ]
       }
     },
@@ -414,7 +404,6 @@
       "success": true,
 
       "data": {
-
         "appointment_id": {
           "type": "string",
           "__example__": "123"
@@ -445,7 +434,6 @@
         "type": "SingleColumnLayout",
 
         "children": [
-
           {
             "type": "TextHeading",
             "text": "Booking Confirmed 🎉"
@@ -510,7 +498,52 @@
               "payload": {}
             }
           }
+        ]
+      }
+    },
 
+
+    {
+      "id": "BOOKING_FAILURE",
+      "title": "Booking Unavailable",
+      "terminal": true,
+      "success": false,
+
+      "data": {
+        "message": {
+          "type": "string",
+          "__example__": "Sorry, this slot has just been booked by someone else."
+        }
+      },
+
+      "layout": {
+        "type": "SingleColumnLayout",
+
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Booking Unavailable"
+          },
+
+          {
+            "type": "TextBody",
+            "text": "Sorry, this slot has just been booked by someone else."
+          },
+
+          {
+            "type": "TextBody",
+            "text": "Please go back and select another available slot."
+          },
+
+          {
+            "type": "Footer",
+            "label": "Done",
+
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
         ]
       }
     }

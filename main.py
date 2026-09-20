@@ -1057,6 +1057,45 @@ async def whatsapp_flow(
 
                                         # Get generated user.id
                                         db.flush()
+                                    #
+                                    # ==================================================
+                                    # CHECK USER ALREADY BOOKED ON THIS DATE
+                                    # ==================================================
+
+                                    existing_appointment = (
+                                        db.query(Appointment)
+                                        .filter(
+                                            Appointment.user_id == user.id,
+                                            Appointment.appointment_date == appointment_date,
+                                            Appointment.status == "booked"
+                                        )
+                                        .first()
+                                    )
+
+                                    if existing_appointment:
+
+                                        logger.warning(
+                                            "USER ALREADY BOOKED | "
+                                            "user_id=%s | date=%s | appointment_id=%s",
+                                            user.id,
+                                            appointment_date,
+                                            existing_appointment.id
+                                        )
+
+                                        response_data = {
+                                            "screen": "USER_ALREADY_BOOKED",
+                                            "data": {
+                                                "date": existing_appointment.appointment_date.strftime(
+                                                    "%d %B %Y"
+                                                ),
+                                                "time": (
+                                                    f"{existing_appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
+                                                    f"{existing_appointment.end_time.strftime('%I:%M %p').lstrip('0')}"
+                                                ),
+                                                "branch": branch.name,
+                                                "service": service.name
+                                            }
+                                        }
 
                                     # ==================================================
                                     # CREATE APPOINTMENT
