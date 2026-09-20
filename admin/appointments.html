@@ -184,7 +184,8 @@ button, input, select, textarea {
     /* Filters */
     #status,
     #from-date,
-    #to-date {
+    #to-date,
+    #search-input {
         min-height: 46px;
     }
 
@@ -509,6 +510,43 @@ button, input, select, textarea {
 
 
             <!-- =================================================
+                 SEARCH (frontend-only, filters the already-
+                 loaded appointments array — no API call)
+            ================================================== -->
+
+            <div
+                class="bg-white border border-slate-100
+                       rounded-2xl p-4 sm:p-5 mb-6 shadow-sm"
+            >
+
+                <div class="relative">
+
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
+                        </svg>
+                    </div>
+
+                    <input
+                        id="search-input"
+                        type="text"
+                        placeholder="Search by name, phone, service or branch..."
+                        class="w-full border
+                               border-slate-200
+                               rounded-xl py-3 pl-11 pr-4
+                               text-sm bg-white
+                               focus:outline-none
+                               focus:ring-2
+                               focus:ring-plum-400
+                               focus:border-transparent"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
                  FILTERS
             ================================================== -->
 
@@ -817,6 +855,20 @@ button, input, select, textarea {
 
 
 // ==========================================================
+// SEARCH STATE
+//
+// Holds the appointments array most recently returned by the
+// existing /admin/appointments API call. The search box filters
+// THIS array in the browser only — it never triggers a new
+// request. Status / From Date / To Date still go through the
+// existing backend call in loadAppointments().
+// ==========================================================
+
+let allAppointments = [];
+let searchDebounceTimer = null;
+
+
+// ==========================================================
 // AUTH CHECK
 // ==========================================================
 
@@ -882,7 +934,7 @@ function statusBadge(status) {
                        text-xs
                        font-semibold"
             >
-                ● Booked
+                Booked
             </span>
         `;
     }
@@ -904,7 +956,7 @@ function statusBadge(status) {
                        text-xs
                        font-semibold"
             >
-                ● Cancelled
+                Cancelled
             </span>
         `;
     }
@@ -1199,6 +1251,133 @@ function appointmentCardHtml(appointment) {
 
 
 // ==========================================================
+// SEARCH: MATCH A SINGLE APPOINTMENT
+//
+// Case-insensitive partial match against customer_name,
+// customer_phone, service_name, branch_name. Null/undefined
+// fields are treated as empty strings.
+// ==========================================================
+
+function matchesSearch(appointment, term) {
+
+    if (!term) {
+
+        return true;
+
+    }
+
+
+    const haystacks = [
+        appointment.customer_name,
+        appointment.customer_phone,
+        appointment.service_name,
+        appointment.branch_name
+    ];
+
+
+    return haystacks.some(function (value) {
+
+        return String(value || "")
+            .toLowerCase()
+            .includes(term);
+
+    });
+
+}
+
+
+// ==========================================================
+// RENDER (SEARCH-FILTERED)
+//
+// Applies the frontend-only search filter to whatever is
+// currently in `allAppointments` (already fetched from the
+// existing API with the current status/date filters applied),
+// then renders using the existing appointmentRowHtml() /
+// appointmentCardHtml() functions. Updates the "X appointment(s)"
+// counter and the existing empty-state UI. No API call here.
+// ==========================================================
+
+function renderAppointments() {
+
+    const body =
+        document.getElementById(
+            "appointments-body"
+        );
+
+    const cards =
+        document.getElementById(
+            "appointments-cards"
+        );
+
+    const empty =
+        document.getElementById(
+            "empty"
+        );
+
+    const showing =
+        document.getElementById(
+            "showing"
+        );
+
+
+    const searchInput =
+        document.getElementById(
+            "search-input"
+        );
+
+    const term = searchInput
+        ? searchInput.value.trim().toLowerCase()
+        : "";
+
+
+    const filteredAppointments =
+        allAppointments.filter(function (appointment) {
+
+            return matchesSearch(
+                appointment,
+                term
+            );
+
+        });
+
+
+    showing.textContent =
+        `${filteredAppointments.length} appointment(s)`;
+
+
+    if (filteredAppointments.length === 0) {
+
+        body.innerHTML = "";
+        cards.innerHTML = "";
+
+        empty.classList.remove(
+            "hidden"
+        );
+
+        return;
+
+    }
+
+
+    empty.classList.add(
+        "hidden"
+    );
+
+
+    body.innerHTML =
+        filteredAppointments
+            .map(appointmentRowHtml)
+            .join("");
+
+    cards.innerHTML =
+        filteredAppointments
+            .map(appointmentCardHtml)
+            .join("");
+
+}
+
+
+// ==========================================================
 // LOAD APPOINTMENTS
 // ==========================================================
 
@@ -1428,43 +1607,19 @@ async function loadAppointments() {
         }
 
 
-        showing.textContent =
-            `${appointments.length} appointment(s)`;
-
-
         // ==================================================
-        // EMPTY RESULT
-        // ==================================================
-
-        if (
-            appointments.length === 0
-        ) {
-
-            body.innerHTML = "";
-            cards.innerHTML = "";
-
-            empty.classList.remove(
-                "hidden"
-            );
-
-            return;
-
-        }
-
-
-        // ==================================================
-        // RENDER ROWS + CARDS
+        // STORE + RENDER (SEARCH-FILTERED)
+        //
+        // Keep the full array from this API call, then let
+        // renderAppointments() apply the current search box
+        // value on top of it and draw the count / empty state /
+        // table rows / cards. Typing in search re-runs only
+        // renderAppointments() — never this API call.
         // ==================================================
 
-        body.innerHTML =
-            appointments
-                .map(appointmentRowHtml)
-                .join("");
+        allAppointments = appointments;
 
-        cards.innerHTML =
-            appointments
-                .map(appointmentCardHtml)
-                .join("");
+        renderAppointments();
 
 
     }
@@ -1477,6 +1632,8 @@ async function loadAppointments() {
             error
         );
 
+
+        allAppointments = [];
 
         showing.textContent =
             "Unable to load";
@@ -1557,7 +1714,54 @@ function resetFilters() {
         .value = "";
 
 
+    const searchInput =
+        document.getElementById(
+            "search-input"
+        );
+
+    if (searchInput) {
+
+        searchInput.value = "";
+
+    }
+
+
     loadAppointments();
+
+}
+
+
+// ==========================================================
+// SEARCH INPUT (DEBOUNCED, FRONTEND-ONLY)
+//
+// Filters the already-loaded `allAppointments` array via
+// renderAppointments(). Never calls loadAppointments() or the
+// API — typing only re-renders from data already in memory.
+// ==========================================================
+
+const searchInputEl =
+    document.getElementById(
+        "search-input"
+    );
+
+if (searchInputEl) {
+
+    searchInputEl.addEventListener(
+        "input",
+        function () {
+
+            clearTimeout(
+                searchDebounceTimer
+            );
+
+            searchDebounceTimer =
+                setTimeout(
+                    renderAppointments,
+                    300
+                );
+
+        }
+    );
 
 }
 
