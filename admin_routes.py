@@ -245,3 +245,90 @@ def save_fcm_token(
         "success": True,
         "message": "FCM token saved"
     }
+
+
+# ==========================================================
+# CANCEL APPOINTMENT
+# ==========================================================
+
+@router.post("/appointments/{appointment_id}/cancel")
+def cancel_appointment(
+
+    appointment_id: int,
+
+    current_admin=Depends(
+        get_current_admin
+    ),
+
+    db: Session = Depends(get_db)
+):
+
+    # ======================================================
+    # FIND APPOINTMENT
+    # ======================================================
+
+    appointment = (
+        db.query(Appointment)
+        .filter(
+            Appointment.id == appointment_id
+        )
+        .first()
+    )
+
+    # ======================================================
+    # NOT FOUND
+    # ======================================================
+
+    if not appointment:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Appointment not found"
+        )
+
+    # ======================================================
+    # ALREADY CANCELLED
+    # ======================================================
+
+    if appointment.status == "cancelled":
+
+        return {
+            "success": True,
+            "message": "Appointment is already cancelled",
+            "appointment_id": appointment.id,
+            "status": appointment.status
+        }
+
+    # ======================================================
+    # ALREADY DELETED
+    # ======================================================
+
+    if appointment.status == "deleted":
+
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot cancel a deleted appointment"
+        )
+
+    # ======================================================
+    # CANCEL
+    # ======================================================
+
+    appointment.status = "cancelled"
+
+    db.commit()
+
+    db.refresh(
+        appointment
+    )
+
+    # ======================================================
+    # RETURN
+    # ======================================================
+
+    return {
+        "success": True,
+        "message": "Appointment cancelled successfully",
+        "appointment_id": appointment.id,
+        "status": appointment.status
+    }

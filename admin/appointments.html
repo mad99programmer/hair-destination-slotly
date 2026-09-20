@@ -693,7 +693,7 @@ button, input, select, textarea {
 
                     <table
                         class="w-full text-sm
-                               min-w-[900px]"
+                               min-w-[1000px]"
                     >
 
                         <thead>
@@ -780,6 +780,17 @@ button, input, select, textarea {
                                     Status
                                 </th>
 
+
+                                <th
+                                    class="text-left p-5
+                                           font-semibold
+                                           text-xs
+                                           text-slate-400
+                                           uppercase"
+                                >
+                                    Actions
+                                </th>
+
                             </tr>
 
                         </thead>
@@ -790,7 +801,7 @@ button, input, select, textarea {
                             <tr>
 
                                 <td
-                                    colspan="7"
+                                    colspan="8"
                                     class="p-12
                                            text-center
                                            text-slate-400"
@@ -1067,6 +1078,54 @@ function escapeHtml(value) {
 
 
 // ==========================================================
+// CANCEL ACTION MARKUP
+//
+// Only shown for appointments still in "booked" status; once
+// cancelled (or in any other terminal status) there's nothing
+// to action, so it's left blank rather than showing a disabled
+// button.
+// ==========================================================
+
+function cancelActionHtml(appointment, variant) {
+
+    if (appointment.status !== "booked") {
+
+        return variant === "table"
+            ? `<span class="text-slate-300 text-xs">—</span>`
+            : "";
+
+    }
+
+    const buttonClasses =
+        variant === "table"
+            ? `inline-flex items-center gap-1.5 border border-rose-200
+               text-rose-600 hover:bg-rose-50 active:scale-[0.98]
+               transition-colors text-xs font-semibold px-3 py-2
+               rounded-lg disabled:opacity-60 disabled:cursor-not-allowed`
+            : `mt-4 pt-4 border-t border-slate-100 w-full
+               inline-flex items-center justify-center gap-1.5
+               border border-rose-200 text-rose-600 hover:bg-rose-50
+               active:scale-[0.98] transition-colors text-xs
+               font-semibold px-3 py-2.5 rounded-lg
+               disabled:opacity-60 disabled:cursor-not-allowed`;
+
+    // Note: the border-t/pt-4 above double as the card's divider
+    // above the button, so no extra wrapper element is needed there.
+
+    return `
+        <button
+            type="button"
+            onclick="cancelAppointment(${appointment.id}, this)"
+            class="${buttonClasses}"
+        >
+            Cancel Appointment
+        </button>
+    `;
+
+}
+
+
+// ==========================================================
 // ROW MARKUP (DESKTOP TABLE)
 // ==========================================================
 
@@ -1180,6 +1239,15 @@ function appointmentRowHtml(appointment) {
         </td>
 
 
+        <!-- ACTIONS -->
+
+        <td class="p-5">
+
+            ${cancelActionHtml(appointment, "table")}
+
+        </td>
+
+
     </tr>
 
     `;
@@ -1193,7 +1261,8 @@ function appointmentRowHtml(appointment) {
 // Each appointment becomes a self-contained card so nothing
 // gets clipped or needs horizontal scrolling on a phone.
 // Shows the same fields as the desktop table: customer,
-// phone, service, branch, date, time, status.
+// phone, service, branch, date, time, status, plus a Cancel
+// action when the appointment is still booked.
 // ==========================================================
 
 function appointmentCardHtml(appointment) {
@@ -1242,6 +1311,8 @@ function appointmentCardHtml(appointment) {
             </div>
 
         </div>
+
+        ${cancelActionHtml(appointment, "card")}
 
     </div>
 
@@ -1414,7 +1485,7 @@ async function loadAppointments() {
         <tr>
 
             <td
-                colspan="7"
+                colspan="8"
                 class="p-12
                        text-center
                        text-slate-400"
@@ -1644,7 +1715,7 @@ async function loadAppointments() {
             <tr>
 
                 <td
-                    colspan="7"
+                    colspan="8"
                     class="p-12
                            text-center"
                 >
@@ -1727,6 +1798,80 @@ function resetFilters() {
 
 
     loadAppointments();
+
+}
+
+
+// ==========================================================
+// CANCEL APPOINTMENT
+//
+// Calls the existing backend endpoint:
+//   POST /admin/appointments/{appointment_id}/cancel
+//
+// Uses apiPost() — the natural POST counterpart to the
+// apiGet() this page already relies on for auth headers. If
+// auth.js doesn't expose apiPost() under that name, this is
+// the only line that needs to change.
+// ==========================================================
+
+async function cancelAppointment(appointmentId, triggerEl) {
+
+    const confirmed = window.confirm(
+        "Cancel this appointment? This cannot be undone."
+    );
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    if (triggerEl) {
+
+        triggerEl.disabled = true;
+
+        triggerEl.textContent =
+            "Cancelling…";
+
+    }
+
+
+    try {
+
+        await apiPost(
+            `/admin/appointments/${appointmentId}/cancel`,
+            {}
+        );
+
+        // Reload from the server so the table, cards, and count
+        // all reflect the new status — this also re-applies the
+        // current status/date filters and the search box.
+        await loadAppointments();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Cancel appointment error:",
+            error
+        );
+
+        alert(
+            `Failed to cancel appointment: ${error.message}`
+        );
+
+        if (triggerEl) {
+
+            triggerEl.disabled = false;
+
+            triggerEl.textContent =
+                "Cancel Appointment";
+
+        }
+
+    }
 
 }
 
