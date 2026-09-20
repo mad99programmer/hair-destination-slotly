@@ -1096,133 +1096,133 @@ async def whatsapp_flow(
                                                 "service": service.name
                                             }
                                         }
+                                    else:
+                                        # ==================================================
+                                        # CREATE APPOINTMENT
+                                        # ==================================================
 
-                                    # ==================================================
-                                    # CREATE APPOINTMENT
-                                    # ==================================================
+                                        appointment = Appointment(
 
-                                    appointment = Appointment(
+                                            user_id=user.id,
 
-                                        user_id=user.id,
+                                            business_id=BUSINESS_ID,
 
-                                        business_id=BUSINESS_ID,
+                                            branch_id=branch_id,
 
-                                        branch_id=branch_id,
+                                            service_id=service_id,
 
-                                        service_id=service_id,
+                                            branch_slot_id=None,
 
-                                        branch_slot_id=None,
+                                            appointment_date=appointment_date,
 
-                                        appointment_date=appointment_date,
+                                            start_time=start_time,
 
-                                        start_time=start_time,
+                                            end_time=end_time,
 
-                                        end_time=end_time,
-
-                                        status="booked"
-                                    )
-
-                                    db.add(
-                                        appointment
-                                    )
-
-                                    db.commit()
-
-                                    db.refresh(
-                                        appointment
-                                    )
-                                    flow_session.completed = True
-                                    flow_session.completed_at = datetime.now(timezone.utc)
-
-                                    db.commit()
-                                    db.refresh(appointment)
-
-                                    logger.info(
-                                        "APPOINTMENT BOOKED SUCCESSFULLY | "
-                                        "appointment_id=%s | "
-                                        "user_id=%s | "
-                                        "phone=%s | "
-                                        "branch=%s | "
-                                        "service=%s | "
-                                        "date=%s | "
-                                        "start=%s | "
-                                        "end=%s",
-                                        appointment.id,
-                                        user.id,
-                                        user_number,
-                                        branch_id,
-                                        service_id,
-                                        appointment_date,
-                                        start_time,
-                                        end_time
-                                    )
-                                    admin = (
-                                        db.query(Admin)
-                                        .filter(
-                                            Admin.is_active == True,
-                                            Admin.fcm_token.isnot(None)
+                                            status="booked"
                                         )
-                                        .first()
-                                    )
 
-                                    if admin and admin.fcm_token:
+                                        db.add(
+                                            appointment
+                                        )
 
-                                        # Extract plain Python values BEFORE background thread
-                                        fcm_token = admin.fcm_token
-                                        appointment_id = appointment.id
-                                        user_name = user.name
-                                        service_name = service.name
-                                        branch_name = branch.name
-                                        appointment_date = str(appointment.appointment_date)
-                                        start_time = appointment.start_time.strftime("%I:%M %p")
+                                        db.commit()
 
-                                        notification_executor.submit(
-                                            send_admin_notification,
-                                            fcm_token,
-                                            appointment_id,
-                                            user_name,
-                                            service_name,
-                                            branch_name,
+                                        db.refresh(
+                                            appointment
+                                        )
+                                        flow_session.completed = True
+                                        flow_session.completed_at = datetime.now(timezone.utc)
+
+                                        db.commit()
+                                        db.refresh(appointment)
+
+                                        logger.info(
+                                            "APPOINTMENT BOOKED SUCCESSFULLY | "
+                                            "appointment_id=%s | "
+                                            "user_id=%s | "
+                                            "phone=%s | "
+                                            "branch=%s | "
+                                            "service=%s | "
+                                            "date=%s | "
+                                            "start=%s | "
+                                            "end=%s",
+                                            appointment.id,
+                                            user.id,
+                                            user_number,
+                                            branch_id,
+                                            service_id,
                                             appointment_date,
-                                            start_time
+                                            start_time,
+                                            end_time
                                         )
-                                        logger.info("[FCM] Notification submitted to background")
-                                    
+                                        admin = (
+                                            db.query(Admin)
+                                            .filter(
+                                                Admin.is_active == True,
+                                                Admin.fcm_token.isnot(None)
+                                            )
+                                            .first()
+                                        )
 
-                                    # ==================================================
-                                    # SUCCESS SCREEN
-                                    # ==================================================
+                                        if admin and admin.fcm_token:
 
-                                    response_data = {
+                                            # Extract plain Python values BEFORE background thread
+                                            fcm_token = admin.fcm_token
+                                            appointment_id = appointment.id
+                                            user_name = user.name
+                                            service_name = service.name
+                                            branch_name = branch.name
+                                            appointment_date = str(appointment.appointment_date)
+                                            start_time = appointment.start_time.strftime("%I:%M %p")
 
-                                        "version": "3.0",
+                                            notification_executor.submit(
+                                                send_admin_notification,
+                                                fcm_token,
+                                                appointment_id,
+                                                user_name,
+                                                service_name,
+                                                branch_name,
+                                                appointment_date,
+                                                start_time
+                                            )
+                                            logger.info("[FCM] Notification submitted to background")
+                                        
 
-                                        "screen": "BOOKING_SUCCESS",
+                                        # ==================================================
+                                        # SUCCESS SCREEN
+                                        # ==================================================
 
-                                        "data": {
+                                        response_data = {
 
-                                            "appointment_id": str(
-                                                appointment.id
-                                            ),
+                                            "version": "3.0",
 
-                                            "date": (
-                                                appointment
-                                                .appointment_date
-                                                .strftime(
-                                                    "%d %B %Y"
-                                                )
-                                            ),
+                                            "screen": "BOOKING_SUCCESS",
 
-                                            "time": (
-                                                f"{appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
-                                                f"{appointment.end_time.strftime('%I:%M %p').lstrip('0')}"
-                                            ),
+                                            "data": {
 
-                                            "branch": branch.name,
+                                                "appointment_id": str(
+                                                    appointment.id
+                                                ),
 
-                                            "service": service.name
+                                                "date": (
+                                                    appointment
+                                                    .appointment_date
+                                                    .strftime(
+                                                        "%d %B %Y"
+                                                    )
+                                                ),
+
+                                                "time": (
+                                                    f"{appointment.start_time.strftime('%I:%M %p').lstrip('0')} - "
+                                                    f"{appointment.end_time.strftime('%I:%M %p').lstrip('0')}"
+                                                ),
+
+                                                "branch": branch.name,
+
+                                                "service": service.name
+                                            }
                                         }
-                                    }
 
                 except Exception:
 
