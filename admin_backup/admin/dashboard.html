@@ -172,11 +172,6 @@ button, input, select, textarea {
     }
 }
 
-/* Preview appointment cards (mobile) */
-.preview-card + .preview-card {
-    border-top: 1px solid rgb(241 245 249);
-}
-
 </style>
 </head>
 
@@ -332,8 +327,7 @@ button, input, select, textarea {
           </a>
         </div>
 
-        <!-- Desktop / tablet: table -->
-        <div id="preview-wrap" class="hidden md:block overflow-x-auto rounded-b-3xl">
+        <div id="preview-wrap" class="overflow-x-auto rounded-b-3xl">
           <table class="w-full text-sm min-w-[560px]">
             <thead>
               <tr class="bg-slate-50/80 text-left border-b border-slate-100">
@@ -354,16 +348,6 @@ button, input, select, textarea {
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Mobile: cards -->
-        <div id="preview-cards" class="md:hidden">
-          <div class="preview-card p-6 text-center">
-            <div class="inline-flex items-center gap-2 text-slate-400">
-              <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-              <span class="font-medium text-sm">Loading appointments…</span>
-            </div>
-          </div>
         </div>
 
         <div id="preview-empty" class="hidden p-16 text-center">
@@ -412,48 +396,6 @@ function statusBadge(status) {
   return `<span class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold border border-slate-200">${status}</span>`;
 }
 
-// Builds one desktop table row for a today's-appointment record.
-function previewRowHtml(a) {
-  return `
-      <tr class="border-b border-slate-50 table-row-hover hover:bg-slate-50/60">
-        <td class="p-5">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-plum-100 to-plum-200 flex items-center justify-center text-xs font-bold text-plum-700">
-              ${a.customer_name.charAt(0).toUpperCase()}
-            </div>
-            <span class="font-semibold text-slate-900">${a.customer_name}</span>
-          </div>
-        </td>
-        <td class="p-5 text-slate-600 font-medium">${a.service_name}</td>
-        <td class="p-5 font-bold text-slate-900">${a.time}</td>
-        <td class="p-5">${statusBadge(a.status)}</td>
-      </tr>
-    `;
-}
-
-// Builds one mobile card for a today's-appointment record. Same fields as
-// the desktop row (customer, service, time, status) laid out so nothing
-// clips or requires horizontal scrolling on a phone.
-function previewCardHtml(a) {
-  return `
-      <div class="preview-card p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-plum-100 to-plum-200 flex items-center justify-center text-xs font-bold text-plum-700">
-              ${a.customer_name.charAt(0).toUpperCase()}
-            </div>
-            <span class="font-semibold text-slate-900 break-words">${a.customer_name}</span>
-          </div>
-          <div class="shrink-0">${statusBadge(a.status)}</div>
-        </div>
-        <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm pl-12">
-          <span class="text-slate-600 font-medium break-words">${a.service_name}</span>
-          <span class="font-bold text-slate-900">${a.time}</span>
-        </div>
-      </div>
-    `;
-}
-
 async function loadDashboard() {
   try {
     const appointments = await apiGet('/admin/appointments');
@@ -475,24 +417,33 @@ async function loadDashboard() {
     document.getElementById('total-count').textContent = totalBookings.length;
 
     const body = document.getElementById('preview-body');
-    const cards = document.getElementById('preview-cards');
     const empty = document.getElementById('preview-empty');
     const wrap = document.getElementById('preview-wrap');
 
     if (todayAppointments.length === 0) {
       wrap.classList.add('hidden');
-      cards.classList.add('hidden');
       empty.classList.remove('hidden');
       return;
     }
 
     wrap.classList.remove('hidden');
-    cards.classList.remove('hidden');
     empty.classList.add('hidden');
 
-    const shown = todayAppointments.slice(0, 5);
-    body.innerHTML = shown.map(previewRowHtml).join('');
-    cards.innerHTML = shown.map(previewCardHtml).join('');
+    body.innerHTML = todayAppointments.slice(0, 5).map(a => `
+      <tr class="border-b border-slate-50 table-row-hover hover:bg-slate-50/60">
+        <td class="p-5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-plum-100 to-plum-200 flex items-center justify-center text-xs font-bold text-plum-700">
+              ${a.customer_name.charAt(0).toUpperCase()}
+            </div>
+            <span class="font-semibold text-slate-900">${a.customer_name}</span>
+          </div>
+        </td>
+        <td class="p-5 text-slate-600 font-medium">${a.service_name}</td>
+        <td class="p-5 font-bold text-slate-900">${a.time}</td>
+        <td class="p-5">${statusBadge(a.status)}</td>
+      </tr>
+    `).join('');
 
   } catch (error) {
     console.error('Dashboard error:', error);
