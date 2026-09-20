@@ -381,7 +381,7 @@ async def webhook_zernio(request: Request, db: Session = Depends(get_db)):
         if conversation_id:
             send_typing_indicator(conversation_id,account_id)
         process_start = time.perf_counter()
-        reply = process_message(user_number, incoming_msg, db,webhook_data=payload)
+        reply = process_message(user_number, incoming_msg, conversation_id,db,webhook_data=payload)
         process_time = (
             time.perf_counter() - process_start
         ) * 1000

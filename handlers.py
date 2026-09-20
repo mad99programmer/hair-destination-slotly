@@ -9,7 +9,7 @@ from models import (
     Branch,
     Service
 )
-from messaging import build_main_menu
+from messaging import send_reply, send_typing_indicator,build_main_menu
 from datetime import date,datetime
 from zoneinfo import ZoneInfo
 from sqlalchemy import or_, and_
@@ -311,6 +311,7 @@ def send_booking_flow(
 def process_message(
     user_number: str,
     incoming_msg: str,
+    conversation_id: str,
     db,
     webhook_data: dict | None = None
 ):
@@ -698,7 +699,7 @@ def process_message(
 
 
         #
-            
+        send_typing_indicator(conversation_id,account_id)    
         flow_sent = send_booking_flow(
             user_number=user_number,
             account_id=account_id,
