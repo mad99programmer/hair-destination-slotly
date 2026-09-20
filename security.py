@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException
 from models import Admin
-from database import SessionLocal
+from database import get_db
 from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -96,7 +96,7 @@ def get_current_admin(
 
 def get_current_admin(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(lambda: SessionLocal())
+    db: Session = Depends(get_db)
 ):
     try:
         payload = verify_token(token)

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date
 from pydantic import BaseModel
-from database import SessionLocal
+from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from models import (
     User,
@@ -26,19 +26,6 @@ router = APIRouter(
 class FCMTokenRequest(BaseModel):
     fcm_token: str
 
-# ==========================================================
-# DATABASE SESSION
-# ==========================================================
-
-def get_db():
-
-    db = SessionLocal()
-
-    try:
-        yield db
-
-    finally:
-        db.close()
 
 
 # ==========================================================
